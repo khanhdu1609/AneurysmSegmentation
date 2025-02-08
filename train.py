@@ -158,8 +158,8 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device="
             target = np.load(os.path.join(subfolder,'label.npy'))
             
             # Convert numpy arrays to tensors and add batch and channel dimensions
-            data_tensor = torch.tensor(data).unsqueeze(0).unsqueeze(0).to(device)  # Shape: (1, 1, D, H, W)
-            target_tensor = torch.tensor(target).unsqueeze(0).unsqueeze(0).long().to(device)  # Shape: (1, 1, D, H, W)
+            data_tensor = torch.tensor(data).unsqueeze(0).unsqueeze(0).float()to(device)  # Shape: (1, 1, D, H, W)
+            target_tensor = torch.tensor(target).unsqueeze(0).unsqueeze(0).float().to(device)  # Shape: (1, 1, D, H, W)
             h,w,d = data_tensor.shape[2], data_tensor.shape[3], data_tensor.shape[4]
             counting_matrix = torch.zeros(1, 1, h, w, d, device=device)
             prediction_matrix = torch.zeros(1, 1, h, w, d, device=device)
