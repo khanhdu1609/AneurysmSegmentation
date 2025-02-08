@@ -5,15 +5,15 @@ import random
 
 def get_crop_coordinates(bbox, image_shape):
     # Calculate the block size along each axis, adjusted to the nearest multiple of 64
-    len_block_x = ((bbox['x'][1] - bbox['x'][0]) // 64 + 1) * 192
-    len_block_y = ((bbox['y'][1] - bbox['y'][0]) // 64 + 1) * 192
+    len_block_x = ((bbox['x'][1] - bbox['x'][0]) // 64 + 1) * 64
+    len_block_y = ((bbox['y'][1] - bbox['y'][0]) // 64 + 1) * 64
     len_block_z = ((bbox['z'][1] - bbox['z'][0]) // 64 + 1) * 64
         
     # Calculate coordinates along the x-axis
     distance_x = random.randint(0, len_block_x - (bbox['x'][1] - bbox['x'][0]))
     if bbox['x'][0] - distance_x < 0:
         start_x, end_x = 0, len_block_x
-    elif bbox['x'][1] + 192 - distance_x > image_shape[0]:
+    elif bbox['x'][1] + 64 - distance_x > image_shape[0]:
         start_x, end_x = image_shape[0] - len_block_x, image_shape[0]
     else:
         start_x, end_x = bbox['x'][0] - distance_x, bbox['x'][0] - distance_x + len_block_x
@@ -22,7 +22,7 @@ def get_crop_coordinates(bbox, image_shape):
     distance_y = random.randint(0, len_block_y - (bbox['y'][1] - bbox['y'][0]))
     if bbox['y'][0] - distance_y < 0:
         start_y, end_y = 0, len_block_y
-    elif bbox['y'][1] + 192 - distance_y > image_shape[1]:
+    elif bbox['y'][1] + 64 - distance_y > image_shape[1]:
         start_y, end_y = image_shape[1] - len_block_y, image_shape[1]
     else:
         start_y, end_y = bbox['y'][0] - distance_y, bbox['y'][0] - distance_y + len_block_y
@@ -39,9 +39,9 @@ def get_crop_coordinates(bbox, image_shape):
     
 import numpy as np
 
-def split_3d(data_coor, block_size=(192, 192, 64)):
+def split_3d(data_coor, block_size=(64, 64, 64)):
     """
-    Splits a 3D NumPy array into 192x192x64 blocks.
+    Splits a 3D NumPy array into 64x64x64 blocks.
 
     Args:
         array: The input 3D NumPy array.
@@ -64,7 +64,7 @@ def split_3d(data_coor, block_size=(192, 192, 64)):
                 
 
     return splitted_coors
-def get_random_crop_coordinates(image_shape, crop_size=(192, 192, 64)):
+def get_random_crop_coordinates(image_shape, crop_size=(64, 64, 64)):
     """
     Calculates random starting coordinates for cropping a block of a given size
     from a 3D NumPy array.
