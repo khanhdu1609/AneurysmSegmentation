@@ -171,7 +171,7 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device="
                 for x in range(0, w - window_size + 1, step):
                     for z in range(0, d - window_size + 1, step):
                         # Forward pass
-                        predictions = F.sigmoid(model(data_tensor[:, :, x:x+window_size, y:y+window_size, z:z+window_size]), dim=1)           
+                        predictions = F.sigmoid(model(data_tensor[:, :, x:x+window_size, y:y+window_size, z:z+window_size]))           
                         sum_prediction_matrix[:, :, x:x+window_size, y:y+window_size, z:z+window_size] += predictions
                         counting_matrix[:, :, x:x+window_size, y:y+window_size, z:z+window_size] += 1                   
                         loss = loss_fn(predictions, target_tensor[:, :, x:x+window_size, y:y+window_size, z:z+window_size])
@@ -181,65 +181,77 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device="
             for y in range(0, h - window_size + 1, step):
                 for x in range(0, w - window_size + 1, step):
                         # Forward pass
-                        predictions = F.sigmoid(model(data_tensor[:, :, x:x+window_size, y:y+window_size, -64:]), dim=1) 
+                        predictions = F.sigmoid(model(data_tensor[:, :, x:x+window_size, y:y+window_size, -64:])) 
                         sum_prediction_matrix[:, :, x:x+window_size, y:y+window_size, -64:] += predictions
                         counting_matrix[:, :, x:x+window_size, y:y+window_size, -64:] += 1
+                        loss = loss_fn(predictions, target_tensor[:, :, x:x+window_size, y:y+window_size, -64:])
+                        case_loss += loss
                         count += 1
             for y in range(0, h - window_size + 1, step):
                 for z in range(0, d - window_size + 1, step):
                         # Forward pass
-                        predictions = F.sigmoid(model(data_tensor[:, :, -64:, y:y+window_size:, z:z+window_size]), dim=1)
+                        predictions = F.sigmoid(model(data_tensor[:, :, -64:, y:y+window_size:, z:z+window_size]))
                         # Get the predicted class (argmax across channels)
                         sum_prediction_matrix[:, :, -64:, y:y+window_size:, z:z+window_size] += predictions
                         counting_matrix[:, :, -64:, y:y+window_size, z:z+window_size] += 1
+                        loss = loss_fn(predictions, target_tensor[:, :, -64, y:y+window_size:, z:z+window_size])
+                        case_loss += loss
                         # Compute Dice loss
                         count += 1
             for x in range(0, w - window_size + 1, step):
                 for z in range(0, d - window_size + 1, step):
                         # Forward pass
-                        predictions = F.sigmoid(model(data_tensor[:, :, x:x+window_size:, -64:, z:z+window_size]), dim=1)
+                        predictions = F.sigmoid(model(data_tensor[:, :, x:x+window_size:, -64:, z:z+window_size]))
                         # Get the predicted class (argmax across channels)
                     # Compute Dice loss
                         sum_prediction_matrix[:, :, x:x+window_size, -64:, z:z+window_size] += predictions
-                        counting_matrix[:, :, x:x+window_size, -64:, z:z+window_size] += 1                    
+                        counting_matrix[:, :, x:x+window_size, -64:, z:z+window_size] += 1    
+                        loss = loss_fn(predictions, target_tensor[:, :, x:x+window_size, -64:, z:z+window_size])
+                        case_loss += loss                
                         count += 1
             #1D
             for y in range(0, h - window_size + 1, step):
                         # Forward pass
-                        predictions = F.sigmoid(model(data_tensor[:, :, -64:, y:y+window_size, -64:]), dim=1)
+                        predictions = F.sigmoid(model(data_tensor[:, :, -64:, y:y+window_size, -64:]))
                         sum_prediction_matrix[:, :, -64:, y:y+window_size, -64:] += predictions
                         counting_matrix[:, :,  -64:, y:y+window_size, -64:] += 1
                         # Compute Dice loss
+                        loss = loss_fn(predictions, target_tensor[:, :, -64:, y:y+window_size, -64:])
+                        case_loss += loss
                         count += 1
             for x in range(0, w - window_size + 1, step):
                         # Forward pass
-                        predictions = F.sigmoid(model(data_tensor[:, :, x:x+window_size, -64:, -64:]), dim=1)
+                        predictions = F.sigmoid(model(data_tensor[:, :, x:x+window_size, -64:, -64:]))
                         sum_prediction_matrix[:, :, x:x+window_size, -64:, -64:] += predictions
                         counting_matrix[:, :, x:x+window_size, -64:, -64:] += 1
                         # Compute Dice loss
+                        loss = loss_fn(predictions, target_tensor[:, :, x:x+window_size, -64:, -64:])
+                        case_loss += loss                
                         count += 1
             for z in range(0, d - window_size + 1, step):
                         # Forward pass
-                        predictions = F.sigmoid(model(data_tensor[:, :, -64:, -64:, z:z+window_size]), dim=1)
+                        predictions = F.sigmoid(model(data_tensor[:, :, -64:, -64:, z:z+window_size]))
                         sum_prediction_matrix[:, :, -64:, -64:, z:z+window_size] += predictions
                         counting_matrix[:, :, -64:, -64:, z:z+window_size] += 1                    
                         # Compute loss   
+                        loss = loss_fn(predictions, target_tensor[:, :, -64:, -64:, z:z+window_size])
+                        case_loss += loss                
                         count += 1
             # Last block
-            predictions = F.sigmoid(model(data_tensor[:, :, -64:, -64:, -64:]), dim=1)
+            predictions = F.sigmoid(model(data_tensor[:, :, -64:, -64:, -64:]))
             sum_prediction_matrix[:, :, -64:, -64:, -64:] += predictions
             counting_matrix[:, :, -64:, -64:, -64:] += 1
             # Compute  loss
-            
+            loss = loss_fn(predictions, target_tensor[:, :, -64:, -64:, -64:])
+            case_loss += loss                
             count += 1
             # Normalize loss for the case
             if count > 0:
                 case_loss /= count
 
             total_loss += case_loss
-            final_matrix = prediction_matrix
-            # final_matrix = torch.argmax(final_matrix, dim=1)
-            # print(torch.sum(final_matrix))
+            final_matrix = sum_prediction_matrix / counting_matrix
+            final_matrix = (final_matrix > 0.5).float()
             # Calculate metrics
             true_positives = torch.sum((final_matrix == 1) & (target_tensor == 1))
             print(f'True positives{true_positives}')
