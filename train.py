@@ -131,7 +131,7 @@ def train_3d_unet(model, train_list, valid_list, num_epochs, window_size=64, ove
 
     print("Training complete.")
 
-def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device="cpu"):
+def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device = torch.device('cuda')):
     """
     Validate a 3D U-Net model on a list of 3D numpy arrays using a sliding window approach.
 
@@ -146,6 +146,7 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device="
     Returns:
         float: Mean Dice loss over all cases.
     """
+    
     model.eval()
     step = window_size-overlap
     total_loss = 0.0
@@ -153,12 +154,13 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device="
 
     with torch.no_grad():
         for case_idx, patient_id in enumerate(valid_list):
-            subfolder = os.path.join("/kaggle/input/traiin-aneurysm-dataset/train_aneurysm_data", patient_id)
+            print(patient_id)
+            subfolder = os.path.join("/kaggle/input/pre-aneurysm-dataset/pre_aneurysm_dataset", patient_id)
             data = np.load(os.path.join(subfolder,'image.npy'))
             target = np.load(os.path.join(subfolder,'label.npy'))
             
             # Convert numpy arrays to tensors and add batch and channel dimensions
-            data_tensor = torch.tensor(data).unsqueeze(0).unsqueeze(0).float()to(device)  # Shape: (1, 1, D, H, W)
+            data_tensor = torch.tensor(data).unsqueeze(0).unsqueeze(0).float().to(device)  # Shape: (1, 1, D, H, W)
             target_tensor = torch.tensor(target).unsqueeze(0).unsqueeze(0).float().to(device)  # Shape: (1, 1, D, H, W)
             h,w,d = data_tensor.shape[2], data_tensor.shape[3], data_tensor.shape[4]
             counting_matrix = torch.zeros(1, 1, h, w, d, device=device)
@@ -194,7 +196,7 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device="
                         # Get the predicted class (argmax across channels)
                         sum_prediction_matrix[:, :, -64:, y:y+window_size:, z:z+window_size] += predictions
                         counting_matrix[:, :, -64:, y:y+window_size, z:z+window_size] += 1
-                        loss = loss_fn(predictions, target_tensor[:, :, -64, y:y+window_size:, z:z+window_size])
+                        loss = loss_fn(predictions, target_tensor[:, :, -64:, y:y+window_size:, z:z+window_size])
                         case_loss += loss
                         # Compute Dice loss
                         count += 1
@@ -207,7 +209,7 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device="
                         sum_prediction_matrix[:, :, x:x+window_size, -64:, z:z+window_size] += predictions
                         counting_matrix[:, :, x:x+window_size, -64:, z:z+window_size] += 1    
                         loss = loss_fn(predictions, target_tensor[:, :, x:x+window_size, -64:, z:z+window_size])
-                        case_loss += loss                
+                        case_loss += loss       
                         count += 1
             #1D
             for y in range(0, h - window_size + 1, step):
@@ -226,7 +228,7 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device="
                         counting_matrix[:, :, x:x+window_size, -64:, -64:] += 1
                         # Compute Dice loss
                         loss = loss_fn(predictions, target_tensor[:, :, x:x+window_size, -64:, -64:])
-                        case_loss += loss                
+                        case_loss += loss
                         count += 1
             for z in range(0, d - window_size + 1, step):
                         # Forward pass
@@ -235,7 +237,7 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device="
                         counting_matrix[:, :, -64:, -64:, z:z+window_size] += 1                    
                         # Compute loss   
                         loss = loss_fn(predictions, target_tensor[:, :, -64:, -64:, z:z+window_size])
-                        case_loss += loss                
+                        case_loss += loss  
                         count += 1
             # Last block
             predictions = F.sigmoid(model(data_tensor[:, :, -64:, -64:, -64:]))
@@ -243,7 +245,7 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device="
             counting_matrix[:, :, -64:, -64:, -64:] += 1
             # Compute  loss
             loss = loss_fn(predictions, target_tensor[:, :, -64:, -64:, -64:])
-            case_loss += loss                
+            case_loss += loss            
             count += 1
             # Normalize loss for the case
             if count > 0:
