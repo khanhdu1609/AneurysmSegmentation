@@ -59,7 +59,7 @@ def train_3d_unet(model, train_list, valid_list, num_epochs, window_size=64, ove
         # Update the training dataset every 10 epochs
         for patient_id in train_list:
             train_dataset = AneurysmDataset(str(patient_id))
-            train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+            train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 
             # Training Phase
             model.train()
@@ -80,54 +80,49 @@ def train_3d_unet(model, train_list, valid_list, num_epochs, window_size=64, ove
 
                 # Calculate Precision for label 1
                 
-                # print(f'final_matrix shape: {final_matrix.shape}, targets shape: {targets.shape}')
-                # if epoch % 5 == 4 and torch.sum(targets) > 0:
-                #     final_matrix = F.sigmoid(outputs).float()
-                #     final_matrix = (final_matrix>0.5).float()
-                #     true_positives = torch.sum((final_matrix == 1) & (targets == 1))
-                #     false_positives = torch.sum((final_matrix == 1) & (targets == 0))
-                #     false_negatives = torch.sum((final_matrix == 0) & (targets == 1))
-                #     true_negatives = torch.sum((final_matrix == 0) & (targets == 0))
-                #     recall = true_positives / (true_positives + false_negatives + 1e-8)
-                #     precision = true_positives / (true_positives + false_positives + 1e-8)
-                #     print(f'Number of label: {torch.sum(targets)}')
-                #     print(f'True positive: {true_positives}')
-                #     print(f'false positive: {false_positives}')
-                #     print(f'false negative: {false_negatives}')
-                #     print(f'true negative: {true_negatives}')
-                #     print(f'Precision: {precision}')
-                #     print(f'Recall: {recall}')
+
+                if epoch % 20 == 0 and torch.sum(targets) > 0:
+                    final_matrix = F.sigmoid(outputs).float()
+                    final_matrix = (final_matrix>0.5).float()
+                    true_positives = torch.sum((final_matrix == 1) & (targets == 1))
+                    false_positives = torch.sum((final_matrix == 1) & (targets == 0))
+                    false_negatives = torch.sum((final_matrix == 0) & (targets == 1))
+                    true_negatives = torch.sum((final_matrix == 0) & (targets == 0))
+                    recall = true_positives / (true_positives + false_negatives + 1e-8)
+                    precision = true_positives / (true_positives + false_positives + 1e-8)
+                    dice_coefficent = 2 * true_positives / (2 * true_positives + false_positives + false_negatives + 1e-8)     
+                    print(f'Number of label: {torch.sum(targets)} - True positive: {true_positives} - false positive: {false_positives} - false negative: {false_negatives} - true negative: {true_negatives} - Precision: {precision} - Recall: {recall} - Dice coefficent: {dice_coefficent}')
             del train_dataset  # Free memory
             del train_loader
         train_loss /= len(train_list)
         scheduler.step() 
         print(f"Epoch {epoch + 1}/{num_epochs}, Train Loss: {train_loss:.4f}")
         model_save_path = os.path.join('/kaggle/working/', 'best.pt')
-        torch.save(model.module.state_dict(), model_save_path)
+        torch.save(model, model_save_path)
         # Validation Phase every 10 epochs
-        if epoch % 20 == 19:
-            val_loss = validate_numpy_cases(
-                model=model,
-                valid_list=valid_list,
-                window_size=window_size,
-                overlap=overlap,
-                device=device,
-            )
-            print(f"Epoch {epoch + 1}/{num_epochs}, Validation Loss: {val_loss}")
+        # if epoch % 40 == 39:
+        #     val_loss = validate_numpy_cases(
+        #         model=model,
+        #         valid_list=valid_list,
+        #         window_size=window_size,
+        #         overlap=overlap,
+        #         device=device,
+        #     )
+        #     print(f"Epoch {epoch + 1}/{num_epochs}, Validation Loss: {val_loss}")
 
-            # Save the best model
-            if val_loss < min_loss:
-                min_loss = val_loss
-                # model_save_path = os.path.join('/kaggle/working/', 'best.pt')
-                # torch.save(model.module.state_dict(), model_save_path)
-                # print(f"Model saved to {model_save_path}")
+        #     # Save the best model
+        #     if val_loss < min_loss:
+        #         min_loss = val_loss
+        #         # model_save_path = os.path.join('/kaggle/working/', 'best.pt')
+        #         # torch.save(model.module.state_dict(), model_save_path)
+        #         # print(f"Model saved to {model_save_path}")
 
-            # Step the scheduler
-            # scheduler.step(val_loss)
+        #     # Step the scheduler
+        #     # scheduler.step(val_loss)
 
-            # Log the learning rate
-            current_lr = optimizer.param_groups[0]['lr']
-            print(f"Learning Rate after Epoch {epoch + 1}: {current_lr:.6f}")
+        #     # Log the learning rate
+        #     current_lr = optimizer.param_groups[0]['lr']
+        #     print(f"Learning Rate after Epoch {epoch + 1}: {current_lr:.6f}")
 
     print("Training complete.")
 
@@ -253,12 +248,13 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device =
 
             total_loss += case_loss
             final_matrix = sum_prediction_matrix / counting_matrix
+            print(f'max:{torch.max(final_matrix)}')
             final_matrix = (final_matrix > 0.5).float()
             # Calculate metrics
             true_positives = torch.sum((final_matrix == 1) & (target_tensor == 1))
             print(f'True positives{true_positives}')
             false_positives = torch.sum((final_matrix == 1) & (target_tensor == 0))
-            print(f'True positives{false_positives}')
+            print(f'False positives{false_positives}')
             false_negatives = torch.sum((final_matrix == 0) & (target_tensor == 1))
             true_negatives = torch.sum((final_matrix == 0) & (target_tensor == 0))
             # Calculate Precision for label 1
@@ -268,8 +264,7 @@ def validate_numpy_cases(model, valid_list, window_size=64, overlap=32, device =
             accuracy = (true_positives + true_negatives) / (true_positives + true_negatives + false_positives + false_negatives + 1e-8)
             print(f'Accuracy: {accuracy}')
             # Dice coefficient
-            dice_coefficent = 2 * true_positives / (2 * true_positives + false_positives + false_negatives + 1e-8)
-            print(f'Dice coefficent: {dice_coefficent}')
+
             #Recall
             recall = true_positives / (true_positives + false_negatives + 1e-8)
             print(f'Recall: {recall}')
